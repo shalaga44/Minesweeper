@@ -39,14 +39,24 @@ class Minesweeper {
     private fun addNewMinesToMatrix(mines: Int) {
         repeat(mines) {
             while (true) {
-                val pos = (0 until width * height)
-                        .random().toPointIn2D(width, height)
-                if (matrix[pos.second][pos.first] != safeFlag)
-                    continue
-                matrix[pos.second][pos.first] = mineFlag
-                break
+                val xyPair = generateNewRandomPoint2D(width, height)
+                if (isMineHere(xyPair.first, xyPair.second)) continue
+                setAsMineHere(xyPair.first, xyPair.second); break
             }
         }
+    }
+
+    private fun setAsMineHere(x: Int, y: Int) {
+        matrix[y][x] = mineFlag
+    }
+
+    private fun isMineHere(x: Int, y: Int): Boolean {
+        return matrix[y][x] == mineFlag
+    }
+
+    private fun generateNewRandomPoint2D(width: Int, height: Int): Pair<Int, Int> {
+        return (0 until width * height)
+                .random().toPointIn2D(width, height)
     }
 
 

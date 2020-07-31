@@ -70,10 +70,10 @@ class Minesweeper {
 
     private fun stringCellOf(cell: String): String {
         return when (cell) {
+            safeCellFlag -> safeCellChar
             in markedFlags -> markedCellChar
             in unMarkFlags -> unOpenedCellChar
             visibleMineFlag -> visibleMineCell
-            safeCellFlag -> safeCellChar
             else -> getCellNumberOrHide(cell)
         }.toString()
     }
@@ -180,7 +180,7 @@ class Minesweeper {
         println("How many mines do you want on the field?")
         val mines = readLine()!!.toInt()
         createNew(mines)
-        enableAllMines()
+        enableAllMines()//for debugging
 
     }
 
@@ -201,9 +201,9 @@ class Minesweeper {
     }
 
     private fun doFreeAction(action: FreeAction): Result {
-        return if (isNumberCell(action.pos))
-            freeSafeCellOrFailed(action.pos)
-        else return Success
+
+        return freeSafeCellOrFailed(action.pos)
+
     }
 
     private fun freeSafeCellOrFailed(pos: Pos): Result {
@@ -242,7 +242,7 @@ class Minesweeper {
         return cellList.toInt()
     }
 
-    private fun stopTheGameUserFailed(): UserFailed {
+    private fun stopTheGameUserFailed(): Result {
         enableAllMines()
         showGrid()
         isRunning = false

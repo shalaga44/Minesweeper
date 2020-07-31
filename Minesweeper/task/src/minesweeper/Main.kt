@@ -7,6 +7,7 @@ sealed class Result
 class MarkingNumberError(val error: String = "There is a number here!") : Result()
 object Success : Result()
 class UserWins(val message: String = "Congratulations! You found all the mines!") : Result()
+class UserFailed(val message: String = "You stepped on a mine and failed!") : Result()
 class InputError(val error: String) : Result()
 
 
@@ -28,7 +29,8 @@ class Minesweeper {
     private val markedFlags = listOf(markedMineFlag, markedSafeFlag)
     private val unMarkFlags = listOf(mineFlag, safeFlag)
 
-    //    private val mineCell = 'X'
+    private val visibleMineFlag = -5
+    private val visibleMineCell = 'X'
     private val safeCellChar = '.'
     private val markedCellChar = '*'
 
@@ -38,7 +40,7 @@ class Minesweeper {
     private var height = 0
     private var width = 0
 
-    fun showGame() {
+    private fun showGrid() {
         println(" |123456789|")
         println("-|---------|")
         matrix.forEachIndexed { index, rows ->
@@ -49,6 +51,11 @@ class Minesweeper {
             println("|")
         }
         println("-|---------|")
+
+    }
+
+    fun showNormalGameGrid() {
+        showGrid()
         printStarterMessage()
     }
 
@@ -60,6 +67,7 @@ class Minesweeper {
         return when (cell) {
             in markedFlags -> markedCellChar
             in unMarkFlags -> safeCellChar
+            visibleMineFlag -> visibleMineCell
             else -> "$cell"
         }.toString()
     }
@@ -169,7 +177,31 @@ class Minesweeper {
     }
 
     private fun doFreeAction(action: FreeAction): Result {
-        TODO("Not yet implemented")
+        return if (isNumberCell(action.pos))
+            MarkingNumberError()
+        else
+            freeSafeCellOrFailed(action.pos)
+    }
+
+    private fun freeSafeCellOrFailed(pos: Pos): Result {
+
+        if (isMineHere(pos))
+            return stopTheGameUserFailed()
+
+        return Success
+    }
+
+    private fun stopTheGameUserFailed(): UserFailed {
+        enableAllMines()
+        showGrid()
+        isRunning = false
+        return UserFailed()
+    }
+
+    private fun enableAllMines() {
+        minesList.forEach {
+            matrix[it.y][it.x] = visibleMineFlag
+        }
     }
 
     private fun doMineAction(action: MineAction): Result {
@@ -181,7 +213,7 @@ class Minesweeper {
 
     private fun getUserInputAction(input: String): UserAction {
         val argv = input.split(" ")
-        val pos = Pos(argv[0].toInt()-1, argv[1].toInt()-1)
+        val pos = Pos(argv[0].toInt() - 1, argv[1].toInt() - 1)
 
         return when (argv.last()) {
             inputFreeFlag -> FreeAction(pos)
@@ -208,11 +240,11 @@ class Minesweeper {
     private fun isUserWon(): Boolean {
         if (isAllMinesMarked())
             if (isOnlyMinesMarked())
-                return stopTheGame()
+                return stopTheGameWin()
         return false
     }
 
-    private fun stopTheGame(): Boolean {
+    private fun stopTheGameWin(): Boolean {
         isRunning = false
         return true
     }
@@ -267,13 +299,14 @@ private fun Int.toPointIn2D(width: Int, height: Int): Pos {
 fun main() {
     val game = Minesweeper()
     game.askUserToCreate()
-    game.showGame()
+    game.showNormalGameGrid()
     while (game.isRunning) {
         val result = when (val result = game.takeUserInput()) {
-            is Success -> game.showGame()
+            is Success -> game.showNormalGameGrid()
             is MarkingNumberError -> println(result.error)
             is UserWins -> println(result.message)
             is InputError -> println(result.error)
+            is UserFailed -> println(result.message)
         }
     }
 }

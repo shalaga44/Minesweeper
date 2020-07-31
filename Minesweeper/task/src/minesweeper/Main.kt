@@ -2,21 +2,33 @@ package minesweeper
 
 data class Pos(val x: Int, val y: Int)
 
+
+sealed class Result
+class MarkingNumberError(val error: String) : Result()
+object Success : Result()
+
+
 class Minesweeper {
-    private lateinit var minesList: Map<Pos, Int>
+    var isRunning: Boolean = true
+    private lateinit var minesList: MutableList<Pos>
     private lateinit var matrix: Array<Array<Int>>
-    private val mineFlag = 0
-    private val safeFlag = -1
-    private val mineCell = 'X'
-    private val safeCell = '.'
+    private val mineFlag = -1
+    private val markedMineFlag = -2
+    private val safeFlag = -3
+    private val markedSafeFlag = -4
+    private val markedFlags = listOf(markedMineFlag, markedSafeFlag)
+    private val unMarkFlags = listOf(mineFlag, safeFlag)
+//    private val mineCell = 'X'
+    private val safeCellChar = '.'
+    private val markedCellChar = '*'
     private var height = 0
     private var width = 0
 
     fun showGame() {
         println(" |123456789|")
         println("-|---------|")
-        matrix.forEachIndexed { index,  rows ->
-            print("${index+1}|")
+        matrix.forEachIndexed { index, rows ->
+            print("${index + 1}|")
             rows.forEach { cell ->
                 print(stringCellOf(cell))
             }
@@ -32,8 +44,8 @@ class Minesweeper {
 
     private fun stringCellOf(cell: Int): String {
         return when (cell) {
-            mineFlag -> mineCell
-            safeFlag -> safeCell
+            in markedFlags -> markedCellChar
+            in unMarkFlags -> safeCellChar
             else -> "$cell"
         }.toString()
     }
@@ -42,7 +54,7 @@ class Minesweeper {
         this.height = height
         this.width = width
         matrix = Array(height) { Array(width) { safeFlag } }
-        minesList = HashMap(width * height)
+        minesList = mutableListOf()
         addNewMinesToMatrix(mines)
         lookAroundAllMatrix()
     }
@@ -95,17 +107,20 @@ class Minesweeper {
             while (true) {
                 val pos = generateNewRandomPoint2D(width, height)
                 if (isMineHere(pos)) continue
-                setAsMineHere(pos); break
+                addMineHere(pos); break
             }
         }
     }
 
-    private fun setAsMineHere(pos: Pos) {
-        with(pos) { matrix[y][x] = mineFlag }
+    private fun addMineHere(pos: Pos) {
+        with(pos) {
+            matrix[y][x] = mineFlag
+            minesList.add(pos)
+        }
     }
 
     private fun isMineHere(pos: Pos): Boolean {
-        with(pos) { return matrix[y][x] == mineFlag }
+        return pos in minesList
     }
 
     private fun generateNewRandomPoint2D(width: Int, height: Int): Pos {
@@ -121,6 +136,60 @@ class Minesweeper {
         createNew(mines)
 
     }
+
+    fun takeUserInput(): Result {
+        val input = readLine()!!.trim()
+        val pos: Pos = parseUserPosInput(input)
+        if (isNumberCell(pos))
+            return MarkingNumberError(markingNumberError())
+        else
+            setOrDeleteMinesMark(pos)
+        return Success
+    }
+
+    private fun markingNumberError(): String {
+        return "There is a number here!"
+    }
+
+    private fun isNumberCell(pos: Pos): Boolean {
+        return matrix[pos.y][pos.x] > 0
+    }
+
+    private fun setOrDeleteMinesMark(pos: Pos) {
+        if (isMarked(pos))
+            deleteMark(pos)
+        else
+            setMark(pos)
+    }
+
+    private fun setMark(pos: Pos) {
+        if (isMineHere(pos))
+            matrix[pos.y][pos.x] = markedMineFlag
+        else
+            matrix[pos.y][pos.x] = markedSafeFlag
+
+    }
+
+    private fun deleteMark(pos: Pos) {
+        if (isMarkedMine(pos))
+            matrix[pos.y][pos.x] = mineFlag
+        else
+            matrix[pos.y][pos.x] = safeFlag
+    }
+
+    private fun isMarkedMine(pos: Pos): Boolean {
+        return matrix[pos.y][pos.x] == markedMineFlag
+    }
+
+    private fun isMarked(pos: Pos): Boolean {
+        return matrix[pos.y][pos.x] in markedFlags
+    }
+
+
+    private fun parseUserPosInput(input: String): Pos {
+        val (x, y) = input.split(" ")
+        return Pos(x.toInt() - 1, y.toInt() - 1)
+    }
 }
 
 private fun Int.toPointIn2D(width: Int, height: Int): Pos {
@@ -131,4 +200,10 @@ fun main() {
     val game = Minesweeper()
     game.askUserToCreate()
     game.showGame()
+    while (game.isRunning) {
+        when (val result = game.takeUserInput()) {
+            is MarkingNumberError -> println(result.error)
+            is Success -> game.showGame()
+        }
+    }
 }

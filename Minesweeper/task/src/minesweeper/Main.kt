@@ -4,11 +4,14 @@ data class Pos(val x: Int, val y: Int)
 
 
 sealed class Result
-class MarkingNumberError(val error: String) : Result()
+class MarkingNumberError(val error: String = "There is a number here!") : Result()
 object Success : Result()
+class UserWins(val message: String = "Congratulations! You found all the mines!") : Result()
 
 
 class Minesweeper {
+    private var totalMines: Int = 0
+    private var markedCounter: Int = 0
     var isRunning: Boolean = true
     private lateinit var minesList: MutableList<Pos>
     private lateinit var matrix: Array<Array<Int>>
@@ -18,7 +21,8 @@ class Minesweeper {
     private val markedSafeFlag = -4
     private val markedFlags = listOf(markedMineFlag, markedSafeFlag)
     private val unMarkFlags = listOf(mineFlag, safeFlag)
-//    private val mineCell = 'X'
+
+    //    private val mineCell = 'X'
     private val safeCellChar = '.'
     private val markedCellChar = '*'
     private var height = 0
@@ -51,6 +55,7 @@ class Minesweeper {
     }
 
     private fun createNew(mines: Int, height: Int = 9, width: Int = 9) {
+        this.totalMines = mines
         this.height = height
         this.width = width
         matrix = Array(height) { Array(width) { safeFlag } }
@@ -140,26 +145,49 @@ class Minesweeper {
     fun takeUserInput(): Result {
         val input = readLine()!!.trim()
         val pos: Pos = parseUserPosInput(input)
-        if (isNumberCell(pos))
-            return MarkingNumberError(markingNumberError())
+        return if (isNumberCell(pos))
+            MarkingNumberError()
         else
             setOrDeleteMinesMark(pos)
-        return Success
     }
 
-    private fun markingNumberError(): String {
-        return "There is a number here!"
-    }
 
     private fun isNumberCell(pos: Pos): Boolean {
         return matrix[pos.y][pos.x] > 0
     }
 
-    private fun setOrDeleteMinesMark(pos: Pos) {
+    private fun setOrDeleteMinesMark(pos: Pos): Result {
         if (isMarked(pos))
             deleteMark(pos)
         else
             setMark(pos)
+        if (isUserWon())
+            return UserWins()
+        return Success
+    }
+
+    private fun isUserWon(): Boolean {
+        if (isAllMinesMarked())
+            if (isOnlyMinesMarked())
+                return stopTheGame()
+        return false
+    }
+
+    private fun stopTheGame(): Boolean {
+        isRunning = false
+        return true
+    }
+
+    private fun isOnlyMinesMarked(): Boolean {
+        return markedCounter == totalMines
+    }
+
+    private fun isAllMinesMarked(): Boolean {
+        minesList.forEach { pos ->
+            if (matrix.atPos(pos) != markedMineFlag)
+                return false
+        }
+        return true
     }
 
     private fun setMark(pos: Pos) {
@@ -167,6 +195,7 @@ class Minesweeper {
             matrix[pos.y][pos.x] = markedMineFlag
         else
             matrix[pos.y][pos.x] = markedSafeFlag
+        markedCounter++
 
     }
 
@@ -175,6 +204,7 @@ class Minesweeper {
             matrix[pos.y][pos.x] = mineFlag
         else
             matrix[pos.y][pos.x] = safeFlag
+        markedCounter--
     }
 
     private fun isMarkedMine(pos: Pos): Boolean {
@@ -192,6 +222,10 @@ class Minesweeper {
     }
 }
 
+private fun Array<Array<Int>>.atPos(pos: Pos): Int {
+    return this[pos.y][pos.x]
+}
+
 private fun Int.toPointIn2D(width: Int, height: Int): Pos {
     return Pos(this % height, this / width)
 }
@@ -202,8 +236,9 @@ fun main() {
     game.showGame()
     while (game.isRunning) {
         when (val result = game.takeUserInput()) {
-            is MarkingNumberError -> println(result.error)
             is Success -> game.showGame()
+            is MarkingNumberError -> println(result.error)
+            is UserWins -> println(result.message)
         }
     }
 }

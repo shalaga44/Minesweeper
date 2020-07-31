@@ -13,12 +13,21 @@ class Minesweeper {
     private var width = 0
 
     fun showGame() {
-        matrix.forEach { rows ->
+        println(" |123456789|")
+        println("-|---------|")
+        matrix.forEachIndexed { index,  rows ->
+            print("${index+1}|")
             rows.forEach { cell ->
                 print(stringCellOf(cell))
             }
-            println()
+            println("|")
         }
+        println("-|---------|")
+        printStarterMessage()
+    }
+
+    private fun printStarterMessage() {
+        println("Set/delete mine marks (x and y coordinates):")
     }
 
     private fun stringCellOf(cell: Int): String {

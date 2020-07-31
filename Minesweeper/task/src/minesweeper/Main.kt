@@ -3,8 +3,8 @@ package minesweeper
 class Minesweeper {
     private lateinit var minesList: Map<Pair<Int, Int>, Int>
     private lateinit var matrix: Array<Array<Int>>
-    private val mineFlag = 0
-    private val safeFlag = 1
+    private val mineFlag = -1
+    private val safeFlag = 0
     private val mineCell = 'X'
     private val safeCell = '.'
     private val errorCell = '?'
@@ -20,12 +20,12 @@ class Minesweeper {
         }
     }
 
-    private fun stringCellOf(cell: Int): Char {
+    private fun stringCellOf(cell: Int): String {
         return when (cell) {
             mineFlag -> mineCell
             safeFlag -> safeCell
-            else -> errorCell
-        }
+            else -> "$cell"
+        }.toString()
     }
 
     private fun createNew(mines: Int, height: Int = 9, width: Int = 9) {
@@ -34,6 +34,48 @@ class Minesweeper {
         matrix = Array(height) { Array(width) { safeFlag } }
         minesList = HashMap(width * height)
         addNewMinesToMatrix(mines)
+        lookAroundAllMatrix()
+    }
+
+    private fun lookAroundAllMatrix() {
+        for (y in 0 until height)
+            for (x in 0 until width) {
+                if (!isMineHere(x, y))
+                    lookAroundCell(x, y)
+            }
+    }
+
+    private fun lookAroundCell(x: Int, y: Int) {
+        val sumOfAround = getListOfAround(x, y).count()
+        matrix[y][x] = sumOfAround
+
+    }
+
+    private fun getListOfAround(x: Int, y: Int): List<Pair<Int, Int>> {
+        return listOf(Pair(x + 1, y),
+                Pair(x - 1, y),
+                Pair(x, y + 1),
+                Pair(x, y - 1),
+                Pair(x + 1, y - 1),
+                Pair(x + 1, y + 1),
+                Pair(x - 1, y - 1),
+                Pair(x - 1, y + 1)).filter { isValidPosition(it) }
+                .filter { isMineHere(it.first, it.second) }
+    }
+
+    private fun isValidPosition(pos: Pair<Int, Int>): Boolean {
+        if (isVerticallyAligned(pos) && isHorizontallyAligned(pos)) {
+            return true
+        }
+        return false
+    }
+
+    private fun isHorizontallyAligned(pos: Pair<Int, Int>): Boolean {
+        return (pos.second >= 0) && (pos.second < height)
+    }
+
+    private fun isVerticallyAligned(pos: Pair<Int, Int>): Boolean {
+        return (pos.first >= 0) && (pos.first < width)
     }
 
     private fun addNewMinesToMatrix(mines: Int) {
@@ -64,6 +106,7 @@ class Minesweeper {
         println("How many mines do you want on the field?")
         val mines = readLine()!!.toInt()
         createNew(mines)
+
     }
 }
 

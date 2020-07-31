@@ -17,22 +17,27 @@ class FreeAction(val pos: Pos) : UserAction()
 class ErrorAction(val input: String) : UserAction()
 
 class Minesweeper {
+    private val visibleTag = 'v'
+    private val hidedenTag = 'h'
     private var totalMines: Int = 0
     private var markedCounter: Int = 0
     var isRunning: Boolean = true
     private lateinit var minesList: MutableList<Pos>
-    private lateinit var matrix: Array<Array<Int>>
-    private val mineFlag = -1
-    private val markedMineFlag = -2
-    private val safeFlag = -3
-    private val markedSafeFlag = -4
+    private lateinit var matrix: Array<Array<String>>
+    private val mineFlag = "mine"
+    private val markedMineFlag = "marked mine"
+    private val unOpenedFlag = "un opened"
+    private val markedSafeFlag = "marked safe"
     private val markedFlags = listOf(markedMineFlag, markedSafeFlag)
-    private val unMarkFlags = listOf(mineFlag, safeFlag)
+    private val unMarkFlags = listOf(mineFlag, unOpenedFlag)
+    private val visibleMineFlag = "visible mine"
+    private val safeCellFlag = "safe cell"
 
-    private val visibleMineFlag = -5
+    private val flags: List<String> = listOf(visibleMineFlag, safeCellFlag) + unMarkFlags + markedFlags
     private val visibleMineCell = 'X'
-    private val safeCellChar = '.'
+    private val unOpenedCellChar = '.'
     private val markedCellChar = '*'
+    private val safeCellChar = '/'
 
     private val inputMineFlag = "mine"
     private val inputFreeFlag = "free"
@@ -63,20 +68,38 @@ class Minesweeper {
         println("Set/unset mine marks or claim a cell as free:")
     }
 
-    private fun stringCellOf(cell: Int): String {
+    private fun stringCellOf(cell: String): String {
         return when (cell) {
             in markedFlags -> markedCellChar
-            in unMarkFlags -> safeCellChar
+            in unMarkFlags -> unOpenedCellChar
             visibleMineFlag -> visibleMineCell
-            else -> "$cell"
+            safeCellFlag -> safeCellChar
+            else -> getCellNumberOrHide(cell)
         }.toString()
+    }
+
+    private fun getCellNumberOrHide(cell: String): Char {
+        return if (isVisibleNumber(cell))
+            getCellNumber(cell)
+        else
+            unOpenedCellChar
+    }
+
+    private fun getCellNumber(cell: String): Char {
+        return cell.last()
+    }
+
+    private fun isVisibleNumber(cell: String): Boolean {
+        if (cell[0] == visibleTag)
+            return true
+        return false
     }
 
     private fun createNew(mines: Int, height: Int = 9, width: Int = 9) {
         this.totalMines = mines
         this.height = height
         this.width = width
-        matrix = Array(height) { Array(width) { safeFlag } }
+        matrix = Array(height) { Array(width) { unOpenedFlag } }
         minesList = mutableListOf()
         addNewMinesToMatrix(mines)
         lookAroundAllMatrix()
@@ -93,7 +116,7 @@ class Minesweeper {
     private fun lookAroundCell(x: Int, y: Int) {
         val sumOfAround = getListOfAround(x, y).count()
         if (sumOfAround != 0)
-            matrix[y][x] = sumOfAround
+            matrix[y][x] = hidedenTag + sumOfAround.toString()
 
     }
 
@@ -157,6 +180,7 @@ class Minesweeper {
         println("How many mines do you want on the field?")
         val mines = readLine()!!.toInt()
         createNew(mines)
+        enableAllMines()
 
     }
 
@@ -178,17 +202,44 @@ class Minesweeper {
 
     private fun doFreeAction(action: FreeAction): Result {
         return if (isNumberCell(action.pos))
-            MarkingNumberError()
-        else
             freeSafeCellOrFailed(action.pos)
+        else return Success
     }
 
     private fun freeSafeCellOrFailed(pos: Pos): Result {
 
         if (isMineHere(pos))
             return stopTheGameUserFailed()
+        else
+            freeFromHere(pos)
 
         return Success
+    }
+
+    private fun freeFromHere(pos: Pos) {
+        if (isNumberCell(pos))
+            setNumberVisible(pos)
+        else
+            setCellSafe(pos)
+    }
+
+    private fun setCellSafe(pos: Pos) {
+        matrix[pos.y][pos.x] = safeCellFlag
+    }
+
+    private fun setNumberVisible(pos: Pos) {
+        val cellNum = matrix.atPos(pos)
+        if (isVisibleNumber(cellNum))
+            throw Exception("$cellNum is already visible")
+        val num = extractCellNumber(cellNum)
+        val newCell = visibleTag + num.toString()
+        matrix[pos.y][pos.x] = newCell
+
+    }
+
+    private fun extractCellNumber(cellNum: String): Int {
+        val cellList = cellNum.filter { it.isDigit() }
+        return cellList.toInt()
     }
 
     private fun stopTheGameUserFailed(): UserFailed {
@@ -224,7 +275,7 @@ class Minesweeper {
 
 
     private fun isNumberCell(pos: Pos): Boolean {
-        return matrix[pos.y][pos.x] > 0
+        return matrix[pos.y][pos.x] !in flags
     }
 
     private fun setOrDeleteMinesMark(pos: Pos): Result {
@@ -274,7 +325,7 @@ class Minesweeper {
         if (isMarkedMine(pos))
             matrix[pos.y][pos.x] = mineFlag
         else
-            matrix[pos.y][pos.x] = safeFlag
+            matrix[pos.y][pos.x] = unOpenedFlag
         markedCounter--
     }
 
@@ -288,7 +339,7 @@ class Minesweeper {
 
 }
 
-private fun Array<Array<Int>>.atPos(pos: Pos): Int {
+private fun Array<Array<String>>.atPos(pos: Pos): String {
     return this[pos.y][pos.x]
 }
 

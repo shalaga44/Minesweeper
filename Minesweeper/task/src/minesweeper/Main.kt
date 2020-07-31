@@ -7,7 +7,13 @@ sealed class Result
 class MarkingNumberError(val error: String = "There is a number here!") : Result()
 object Success : Result()
 class UserWins(val message: String = "Congratulations! You found all the mines!") : Result()
+class InputError(val error: String) : Result()
 
+
+sealed class UserAction
+class MineAction(val pos: Pos) : UserAction()
+class FreeAction(val pos: Pos) : UserAction()
+class ErrorAction(val input: String) : UserAction()
 
 class Minesweeper {
     private var totalMines: Int = 0
@@ -25,6 +31,10 @@ class Minesweeper {
     //    private val mineCell = 'X'
     private val safeCellChar = '.'
     private val markedCellChar = '*'
+
+    private val inputMineFlag = "mine"
+    private val inputFreeFlag = "free"
+
     private var height = 0
     private var width = 0
 
@@ -43,7 +53,7 @@ class Minesweeper {
     }
 
     private fun printStarterMessage() {
-        println("Set/delete mine marks (x and y coordinates):")
+        println("Set/unset mine marks or claim a cell as free:")
     }
 
     private fun stringCellOf(cell: Int): String {
@@ -144,11 +154,40 @@ class Minesweeper {
 
     fun takeUserInput(): Result {
         val input = readLine()!!.trim()
-        val pos: Pos = parseUserPosInput(input)
-        return if (isNumberCell(pos))
+        val action = getUserInputAction(input)
+
+        return when (action) {
+            is MineAction -> doMineAction(action)
+            is FreeAction -> doFreeAction(action)
+            is ErrorAction -> doErrorAction(action)
+        }
+
+    }
+
+    private fun doErrorAction(action: ErrorAction): Result {
+        return InputError("Unknown: ${action.input.split(" ").last()}")
+    }
+
+    private fun doFreeAction(action: FreeAction): Result {
+        TODO("Not yet implemented")
+    }
+
+    private fun doMineAction(action: MineAction): Result {
+        return if (isNumberCell(action.pos))
             MarkingNumberError()
         else
-            setOrDeleteMinesMark(pos)
+            setOrDeleteMinesMark(action.pos)
+    }
+
+    private fun getUserInputAction(input: String): UserAction {
+        val argv = input.split(" ")
+        val pos = Pos(argv[0].toInt()-1, argv[1].toInt()-1)
+
+        return when (argv.last()) {
+            inputFreeFlag -> FreeAction(pos)
+            inputMineFlag -> MineAction(pos)
+            else -> ErrorAction(input)
+        }
     }
 
 
@@ -208,18 +247,13 @@ class Minesweeper {
     }
 
     private fun isMarkedMine(pos: Pos): Boolean {
-        return matrix[pos.y][pos.x] == markedMineFlag
+        return matrix.atPos(pos) == markedMineFlag
     }
 
     private fun isMarked(pos: Pos): Boolean {
         return matrix[pos.y][pos.x] in markedFlags
     }
 
-
-    private fun parseUserPosInput(input: String): Pos {
-        val (x, y) = input.split(" ")
-        return Pos(x.toInt() - 1, y.toInt() - 1)
-    }
 }
 
 private fun Array<Array<Int>>.atPos(pos: Pos): Int {
@@ -235,10 +269,11 @@ fun main() {
     game.askUserToCreate()
     game.showGame()
     while (game.isRunning) {
-        when (val result = game.takeUserInput()) {
+        val result = when (val result = game.takeUserInput()) {
             is Success -> game.showGame()
             is MarkingNumberError -> println(result.error)
             is UserWins -> println(result.message)
+            is InputError -> println(result.error)
         }
     }
 }

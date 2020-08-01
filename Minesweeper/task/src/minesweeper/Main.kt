@@ -35,7 +35,9 @@ class Minesweeper {
     private val visibleMineFlag = "visible mine"
     private val safeCellFlag = "safe cell"
 
-    private val flags: List<String> = listOf(visibleMineFlag, safeCellFlag) + unMarkFlags + markedFlags
+    private val markedNumberTag = 'm'
+    private val unMarkedNumberTag = 'n'
+
     private val visibleMineCell = 'X'
     private val unOpenedCellChar = '.'
     private val markedCellChar = '*'
@@ -86,6 +88,8 @@ class Minesweeper {
     private fun getCellNumberOrHide(cell: String): Char {
         return if (isVisibleNumber(cell))
             getCellNumber(cell)
+        else if (isNumberMarked(cell))
+            markedCellChar
         else
             unOpenedCellChar
     }
@@ -121,7 +125,9 @@ class Minesweeper {
     private fun lookAroundCell(x: Int, y: Int) {
         val sumOfAround = getListOfAround(x, y).filter { isMineHere(it) }.count()
         if (sumOfAround != 0)
-            matrix[y][x] = hidedenNumberTag + sumOfAround.toString()
+            matrix[y][x] = hidedenNumberTag +
+                    unMarkedNumberTag.toString() +
+                    sumOfAround.toString()
 
 
     }
@@ -187,7 +193,7 @@ class Minesweeper {
         val mines = readLine()!!.toInt()
         createNew(mines)
         markAllMatrixAsNotVisited()
-        enableAllMines()//for debugging
+//        enableAllMines()//for debugging
 
     }
 
@@ -324,9 +330,51 @@ class Minesweeper {
 
     private fun doMineAction(action: MineAction): Result {
         return if (isNumberCell(action.pos))
-            MarkingNumberError()
+            setOrDeleteNumberMark(action.pos)
         else
             setOrDeleteMinesMark(action.pos)
+    }
+
+    private fun setOrDeleteNumberMark(pos: Pos): Result {
+        if (isNumberMarked(pos))
+            deleteNumberMark(pos)
+        else
+            setNumberMark(pos)
+        return Success
+    }
+
+    private fun setNumberMark(pos: Pos) {
+        val cellNum = matrix.atPos(pos).split("").drop(1).dropLast(1).toMutableList()
+        cellNum[1] = markedNumberTag.toString()
+        matrix[pos.y][pos.x] = cellNum.joinToString("")
+    }
+
+    private fun deleteNumberMark(pos: Pos) {
+        val cellNum = matrix.atPos(pos).split("").drop(1).dropLast(1).toMutableList()
+        cellNum[1] = unMarkedNumberTag.toString()
+        matrix[pos.y][pos.x] = cellNum.joinToString("")
+    }
+
+    private fun isNumberMarked(pos: Pos): Boolean {
+        val tag = getNumberMarkingTag(matrix.atPos(pos))
+        if (tag == markedNumberTag.toString())
+            return true
+        return false
+
+
+    } private fun isNumberMarked(cellNum: String): Boolean {
+        val tag = getNumberMarkingTag(cellNum)
+        if (tag == markedNumberTag.toString())
+            return true
+        return false
+
+
+    }
+
+    private fun getNumberMarkingTag(cellNum: String): String {
+        val cellList = cellNum.split("").drop(1).dropLast(1)
+        return cellList[1]
+
     }
 
     private fun getUserInputAction(input: String): UserAction {

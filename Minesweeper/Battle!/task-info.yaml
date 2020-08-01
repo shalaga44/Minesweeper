@@ -478,34 +478,9 @@ files:
     }
   learner_created: false
 feedback_link: https://hyperskill.org/projects/8/stages/469/implement
-status: Failed
+status: Solved
 feedback:
-  message: |-
-    Wrong answer in test #24
-
-    Cannot find a field after the last input. Make sure you output this field using &#39;|&#39; and &#39;-&#39; characters.
-
-    Please find below the output of your program during this failed test.
-    Note that the &#39;&gt;&#39; character indicates the beginning of the input line.
-
-    ---
-
-    How many mines do you want on the field?
-    &gt; 2
-     |123456789|
-    -|---------|
-    1|.........|
-    2|.........|
-    3|.........|
-    4|.........|
-    5|.........|
-    6|.........|
-    7|.........|
-    8|.........|
-    9|.........|
-    -|---------|
-    Set/unset mine marks or claim a cell as free:
-    &gt; 9 3 mine
-    There is a number here!
-  time: Sat, 01 Aug 2020 00:50:35 UTC
+  message: Congratulations! Continue on <a href="https://hyperskill.org/projects/8/stages/469/implement">JetBrains
+    Academy</a>
+  time: Sat, 01 Aug 2020 01:33:52 UTC
 record: -1

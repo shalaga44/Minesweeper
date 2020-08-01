@@ -1,5 +1,7 @@
 package minesweeper
 
+import java.util.*
+
 data class Pos(val x: Int, val y: Int)
 
 
@@ -17,8 +19,8 @@ class FreeAction(val pos: Pos) : UserAction()
 class ErrorAction(val input: String) : UserAction()
 
 class Minesweeper {
-    private val visibleTag = 'v'
-    private val hidedenTag = 'h'
+    private val visibleNumberTag = 'v'
+    private val hidedenNumberTag = 'h'
     private var totalMines: Int = 0
     private var markedCounter: Int = 0
     var isRunning: Boolean = true
@@ -44,6 +46,9 @@ class Minesweeper {
 
     private var height = 0
     private var width = 0
+
+    private val queue: Queue<Pos> = LinkedList()
+    private var visitedPositions: HashMap<String, Boolean> = hashMapOf()
 
     private fun showGrid() {
         println(" |123456789|")
@@ -90,7 +95,7 @@ class Minesweeper {
     }
 
     private fun isVisibleNumber(cell: String): Boolean {
-        if (cell[0] == visibleTag)
+        if (cell[0] == visibleNumberTag)
             return true
         return false
     }
@@ -114,9 +119,10 @@ class Minesweeper {
     }
 
     private fun lookAroundCell(x: Int, y: Int) {
-        val sumOfAround = getListOfAround(x, y).count()
+        val sumOfAround = getListOfAround(x, y).filter { isMineHere(it) }.count()
         if (sumOfAround != 0)
-            matrix[y][x] = hidedenTag + sumOfAround.toString()
+            matrix[y][x] = hidedenNumberTag + sumOfAround.toString()
+
 
     }
 
@@ -130,7 +136,7 @@ class Minesweeper {
                 Pos(x - 1, y - 1),
                 Pos(x - 1, y + 1))
                 .filter { isValidPosition(it) }
-                .filter { isMineHere(it) }
+
     }
 
     private fun isValidPosition(pos: Pos): Boolean {
@@ -180,8 +186,18 @@ class Minesweeper {
         println("How many mines do you want on the field?")
         val mines = readLine()!!.toInt()
         createNew(mines)
+        markAllMatrixAsNotVisited()
         enableAllMines()//for debugging
 
+    }
+
+    private fun markAllMatrixAsNotVisited() {
+        (0 until height).forEach { y ->
+            (0 until width).forEach { x ->
+                markAsNotVisited(Pos(x, y))
+            }
+
+        }
     }
 
     fun takeUserInput(): Result {
@@ -216,7 +232,58 @@ class Minesweeper {
         return Success
     }
 
-    private fun freeFromHere(pos: Pos) {
+    private fun freeFromHere(start: Pos) {
+        visit(start)
+        while (queue.isNotEmpty()) {
+            val pos = queue.remove()
+            getNextPositions(pos).forEach {
+                if (isNotVisited(it))
+                    visit(it)
+
+            }
+        }
+
+    }
+
+    private fun visit(pos: Pos) {
+        freePos(pos)
+        markAsVisited(pos)
+        queue.add(pos)
+    }
+
+    private fun getNextPositions(pos: Pos) = sequence {
+
+        getPositions(pos)
+                .filter { isValidPosition(it) }
+                .forEach {
+                    if (!isMineHere(it))
+                        yield(it)
+                }
+    }
+
+    private fun getPositions(pos: Pos): List<Pos> {
+        with(pos) {
+            return listOf(
+                    Pos(x + 1, y),
+                    Pos(x - 1, y),
+                    Pos(x, y + 1),
+                    Pos(x, y - 1))
+        }
+    }
+
+    private fun markAsVisited(pos: Pos) {
+        this.visitedPositions[pos.toString()] = true
+    }
+
+    private fun markAsNotVisited(pos: Pos) {
+        this.visitedPositions[pos.toString()] = false
+    }
+
+    private fun isNotVisited(pos: Pos): Boolean {
+        return !this.visitedPositions[pos.toString()]!!
+    }
+
+    private fun freePos(pos: Pos) {
         if (isNumberCell(pos))
             setNumberVisible(pos)
         else
@@ -232,7 +299,7 @@ class Minesweeper {
         if (isVisibleNumber(cellNum))
             throw Exception("$cellNum is already visible")
         val num = extractCellNumber(cellNum)
-        val newCell = visibleTag + num.toString()
+        val newCell = visibleNumberTag + num.toString()
         matrix[pos.y][pos.x] = newCell
 
     }
@@ -275,7 +342,10 @@ class Minesweeper {
 
 
     private fun isNumberCell(pos: Pos): Boolean {
-        return matrix[pos.y][pos.x] !in flags
+        val cellNum = matrix.atPos(pos)
+        if (cellNum[0] == hidedenNumberTag || cellNum[0] == visibleNumberTag)
+            return true
+        return false
     }
 
     private fun setOrDeleteMinesMark(pos: Pos): Result {

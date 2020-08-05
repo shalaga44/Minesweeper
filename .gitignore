@@ -1,4 +1,6 @@
 *.iml
+*.html
+*.java
 .gradle
 /local.properties
 /.idea/caches
